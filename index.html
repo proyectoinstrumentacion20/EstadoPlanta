@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estado del Cultivo de Albahaca</title>
+  <style>
+    body {
+      font-family: "Comic Sans MS", sans-serif;
+      background-color: #f9f9f9;
+      color: #2d572c;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .dashboard {
+      display: flex;
+      gap: 30px;
+      align-items: stretch;
+      width: 90%;
+      max-width: 1000px;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+    }
+    .sensores {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+      flex: 1;
+    }
+    .bloque {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #e9f7ef;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+      transition: background 0.5s, transform 0.3s;
+    }
+    .bloque img {
+      width: 50px;
+      height: 50px;
+    }
+    .bloque h2 {
+      margin: 0;
+      font-size: 1.3em;
+      flex: 1;
+      text-align: center;
+    }
+    .bloque.alerta {
+      background: #ffe4e1;
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
+    }
+    .planta {
+      flex: 1.5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 20px;
+      background: #f0fff4;
+      transition: background 0.5s;
+    }
+    .planta img {
+      width: 250px;
+      height: auto;
+      margin-bottom: 15px;
+      transition: transform 0.5s;
+    }
+    .planta.alerta {
+      background: #ffeaea;
+    }
+    #mensaje {
+      font-size: 1.3em;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px 20px;
+      border-radius: 10px;
+    }
+    button {
+      margin-top: 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    footer {
+      position: absolute;
+      bottom: 10px;
+      font-size: 0.9em;
+      color: #6b6b6b;
+    }
+    @media (max-width: 700px) {
+      .dashboard {
+        flex-direction: column;
+        align-items: center;
+      }
+      .bloque {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <div class="sensores">
+      <div class="bloque" id="tempBloque">
+        <img src="imagenes/logo1.png" alt="Temperatura">
+        <h2>Temperatura</h2>
+      </div>
+      <div class="bloque" id="humBloque">
+        <img src="imagenes/logo2.png" alt="Humedad">
+        <h2>Humedad</h2>
+      </div>
+      <div class="bloque" id="luzBloque">
+        <img src="imagenes/logo3.png" alt="Luz">
+        <h2>Luz</h2>
+      </div>
+    </div>
+
+    <div class="planta" id="bloquePlanta">
+      <img id="planta-img" src="imagenes/plantafeliz.jpg" alt="Estado de la planta">
+      <div id="mensaje">🌿 Todo está bien 🌿</div>
+      <button onclick="verificar()">🔍 Verificar Estado</button>
+    </div>
+  </div>
+
+  <footer>Lectura en tiempo real desde ThingSpeak</footer>
+
+  <script>
+    const apiKey = "7UIQWW6RYL6IEHZD"; // READ API Key
+    const canalID = "3126330";           // ID de canal
+
+    async function obtenerDatos() {
+      try {
+        const url = `https://api.thingspeak.com/channels/${canalID}/feeds/last.json?api_key=${apiKey}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        // Ajusta los campos según tu Arduino
+        const temperatura = parseFloat(data.field1); // °C
+        const humedad = parseFloat(data.field2);     // % suelo
+        const luz = parseFloat(data.field3);         // % luz ambiente
+
+        actualizarInterfaz(temperatura, humedad, luz);
+      } catch (error) {
+        document.getElementById("mensaje").textContent = "Error al conectar 😞";
+      }
+    }
+
+    function actualizarInterfaz(temp, hum, luz) {
+      const bloqueTemp = document.getElementById("tempBloque");
+      const bloqueHum = document.getElementById("humBloque");
+      const bloqueLuz = document.getElementById("luzBloque");
+      const planta = document.getElementById("planta-img");
+      const bloquePlanta = document.getElementById("bloquePlanta");
+      const mensaje = document.getElementById("mensaje");
+
+      let alerta = false;
+
+      // Temperatura alta >28°C
+      if (temp > 28) {
+        bloqueTemp.classList.add("alerta");
+        alerta = true;
+      } else {
+        bloqueTemp.classList.remove("alerta");
+      }
+
+      // Humedad baja <40%
+      if (hum < 40) {
+        bloqueHum.classList.add("alerta");
+        alerta = true;
+      } else {
+        bloqueHum.classList.remove("alerta");
+      }
+
+      // Luz baja <30%
+      if (luz < 30) {
+        bloqueLuz.classList.add("alerta");
+        alerta = true;
+      } else {
+        bloqueLuz.classList.remove("alerta");
+      }
+
+      // Actualizar estado de la planta
+      if (alerta) {
+        planta.src = "imagenes/plantatriste.jpg";
+        bloquePlanta.classList.add("alerta");
+        mensaje.textContent = "⚠️ ¡Revisar planta urgente!";
+      } else {
+        planta.src = "imagenes/plantafeliz.jpg";
+        bloquePlanta.classList.remove("alerta");
+        mensaje.textContent = "🌿 Todo está bien 🌿";
+      }
+    }
+
+    function verificar() {
+      obtenerDatos();
+    }
+
+    obtenerDatos();
+    setInterval(obtenerDatos, 7000); // cada 7 segundos
+  </script>
+</body>
+</html>
